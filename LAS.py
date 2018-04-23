@@ -11,7 +11,7 @@ pyramid_layers = 3
 vocab_size = 33
 mel_freq = 40
 
-batch = 1  # TODO: 32
+batch = 32
 epochs = 20
 key_dimension = 128
 value_dimension = 128
@@ -114,8 +114,6 @@ class Encoder(nn.Module):
         self.projection2 = nn.Linear(in_features=2 * e_hidden_dimension,
                                      out_features=value_dimension)
 
-    # TODO: is cropping everything a good idea? what if utterance become size 0
-    # TODO: masked softmax
     def forward(self, h):
         h_0_1 = self.h_0_1.expand(-1, batch, -1)
         c_0_1 = self.c_0_1.expand(-1, batch, -1)
@@ -192,10 +190,6 @@ class Decoder(nn.Module):
         self.projection = nn.Linear(in_features=hidden_dimension
                                     + value_dimension,
                                     out_features=vocab_size)
-        #(hidden+value size)->(embedding)->(vocab)
-        #self.projection.weight = self.embedding.weight
-        # self.lstmCell2 = LSTMCell(input_size=300, hidden_size=300)
-        # self.lstmCell3 = LSTMCell(input_size=300, hidden_size=300)
 
     # input should be #timesteps X #batch_size
     # keys should be # (utterance length, batch size, key dimension)
@@ -281,26 +275,67 @@ def train():
         collate_fn=MyDataLoader())
 
     for epoch in range(0, epochs):
+        losses = []
+        model.train()
         for (X, Y_x, Y_y, Y_sizes) in data_loader:
-            logits = model(X, Y_x)
-            loss(logits, Y_y)
-            print (logits.shape)
-            print (Y_y.shape)
-            print (Y_sizes)
+            optim.zero_grad()
+            logits = model(X, Y_x)  # L X N X V
+            Y_sizes = torch.Tensor(Y_sizes).view(1, -1)  # 1 X N
 
-            print ("Enter")
-            exit()
+            mask = torch.arange(1, Y_y.shape[0] + 1).view(-1, 1)  # L X 1
+            mask = mask <= Y_sizes  # L X N
 
-        # losses = []
-        # model.train()
+            logits = logits.view(-1, vocab_size)  # (L*N, vocab_size)
+            Y_y = Y_y.view(-1, 1)  # (L*N, 1)
+            mask = to_variable(mask.view(-1, 1))  # (L*N, 1)
+
+            preds = torch.masked_select(logits, mask).view(-1, vocab_size)  # (No. of 1s, vocab_size)
+            targets = torch.masked_select(Y_y, mask)
+
+            loss = loss_fn(preds, targets)
+            loss.backward()
+            losses.append(loss.data.cpu().numpy())
+            optim.step()
+
+        torch.save(model.state_dict(), 'model_params' + str(epoch) + '.pt')
+        print("Epoch {} Training Loss: {:.4f}".format(epoch, np.asscalar(np.mean(losses))))
+
+        losses_valid = []
+        model.eval()
+        for (X, Y_x, Y_y, Y_sizes) in data_loader_valid:
+
+            logits = model(X, Y_x)  # L X N X V
+            Y_sizes = torch.Tensor(Y_sizes).view(1, -1)  # 1 X N
+
+            mask = torch.arange(1, Y_y.shape[0] + 1).view(-1, 1)  # L X 1
+            mask = mask <= Y_sizes  # L X N
+
+            logits = logits.view(-1, vocab_size)  # (L*N, vocab_size)
+            Y_y = Y_y.view(-1, 1)  # (L*N, 1)
+            mask = to_variable(mask.view(-1, 1))  # (L*N, 1)
+
+            preds = torch.masked_select(logits, mask).view(-1, vocab_size)  # (No. of 1s, vocab_size)
+            targets = torch.masked_select(Y_y, mask)
+
+            loss = loss_fn(preds, targets)
+            losses_valid.append(loss.data.cpu().numpy())
+
+        print("Epoch {} Validation Loss: {:.4f}".format(epoch, np.asscalar(np.mean(losses_valid))))
+
+        with open("loss" + str(epoch), 'w') as f:
+            f.write("Epoch {} Training Loss: {:.4f}\n".format(epoch, np.asscalar(np.mean(losses))))
+            f.write("Epoch {} Validation Loss: {:.4f}".format(epoch, np.asscalar(np.mean(losses_valid))))
+
+
 train()
+
+
 # recitation6
 '''
 Two options in general
 
 - Do some masking on the loss function to zero out the padding areas
 
-- Do some slicing on your inputs and outputs so you only consider the non - padding areas
 
 Working with padded tensors and a mask should be the easiest for attention. So given utterances you can produce keys, values and a mask.
 
@@ -316,3 +351,9 @@ The standard is to always use teacher forcing during training 100 % . Reducing t
 
 # if you have a stack of 3 LSTMs, use the h0 of the
 # last LSTM in the stack to generate your additional query.
+#(hidden+value size)->(embedding)->(vocab)
+#self.projection.weight = self.embedding.weight
+# self.lstmCell2 = LSTMCell(input_size=300, hidden_size=300)
+# self.lstmCell3 = LSTMCell(input_size=300, hidden_size=300)
+# TODO: is cropping to multiple of 8 a good idea? what if utterance become size 0
+# TODO: masked softmax
