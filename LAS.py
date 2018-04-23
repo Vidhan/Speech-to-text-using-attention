@@ -11,7 +11,7 @@ pyramid_layers = 3
 vocab_size = 33
 mel_freq = 40
 
-batch = 32 
+batch = 32
 epochs = 20
 key_dimension = 128
 value_dimension = 128
@@ -123,7 +123,7 @@ class Encoder(nn.Module):
         #c_0_3 = self.c_0_3.expand(-1, batch, -1).contiguous()
         #h_0_4 = self.h_0_4.expand(-1, batch, -1).contiguous()
         #c_0_4 = self.c_0_4.expand(-1, batch, -1).contiguous()
-        h, state = self.rnn1(h)#, (h_0_1, c_0_1))
+        h, state = self.rnn1(h)  # , (h_0_1, c_0_1))
         pad_array, seq_length = pad_packed_sequence(sequence=h,
                                                     padding_value=0,
                                                     batch_first=False)
@@ -136,7 +136,7 @@ class Encoder(nn.Module):
         seq_length = [int(x / 2) for x in seq_length]
 
         h = pack_padded_sequence(pad_array, seq_length)
-        h, state = self.rnn2(h)#, (h_0_2, c_0_2))
+        h, state = self.rnn2(h)  # , (h_0_2, c_0_2))
         pad_array, seq_length = pad_packed_sequence(sequence=h,
                                                     padding_value=0,
                                                     batch_first=False)
@@ -149,7 +149,7 @@ class Encoder(nn.Module):
         seq_length = [int(x / 2) for x in seq_length]
 
         h = pack_padded_sequence(pad_array, seq_length)
-        h, state = self.rnn3(h) #, (h_0_3, c_0_3))
+        h, state = self.rnn3(h)  # , (h_0_3, c_0_3))
         pad_array, seq_length = pad_packed_sequence(sequence=h,
                                                     padding_value=0,
                                                     batch_first=False)
@@ -162,7 +162,7 @@ class Encoder(nn.Module):
         seq_length = [int(x / 2) for x in seq_length]
 
         h = pack_padded_sequence(pad_array, seq_length)
-        h, state = self.rnn4(h) #, (h_0_4, c_0_4))
+        h, state = self.rnn4(h)  # , (h_0_4, c_0_4))
         pad_array, seq_length = pad_packed_sequence(sequence=h,
                                                     padding_value=0,
                                                     batch_first=False)
@@ -239,9 +239,6 @@ class Model(nn.Module):
 
     def forward(self, X, Y_x):
         keys, values = self.encoder(X)
-        #print (keys)
-        #print (values)
-        #exit()
         logits = self.decoder(Y_x, keys, values)
         return logits
 
@@ -286,8 +283,6 @@ def train():
             print ("Enter")
             optim.zero_grad()
             logits = model(X, Y_x)  # L X N X V
-            #print (logits)
-            #exit()
             Y_sizes = torch.Tensor(Y_sizes).view(1, -1)  # 1 X N
 
             mask = torch.arange(1, Y_y.shape[0] + 1).view(-1, 1)  # L X 1
@@ -297,7 +292,8 @@ def train():
             Y_y = Y_y.view(-1, 1)  # (L*N, 1)
             mask = to_variable(mask.view(-1, 1))  # (L*N, 1)
 
-            preds = torch.masked_select(logits, mask).view(-1, vocab_size)  # (No. of 1s, vocab_size)
+            preds = torch.masked_select(logits, mask).view(-1, vocab_size)
+            # (No. of 1s, vocab_size)
             targets = torch.masked_select(Y_y, mask)
 
             loss = loss_fn(preds, targets)
@@ -306,9 +302,11 @@ def train():
             optim.step()
 
         torch.save(model.state_dict(), 'model_params' + str(epoch) + '.pt')
-        print("Epoch {} Training Loss: {:.4f}".format(epoch, np.asscalar(np.mean(losses))))
+        print("Epoch {} Training Loss: {:.4f}".format(epoch,
+                                                      np.asscalar(np.mean
+                                                                  (losses))))
 
-        losses_valid = []
+        losses_v = []
         model.eval()
         for (X, Y_x, Y_y, Y_sizes) in data_loader_valid:
 
@@ -322,17 +320,21 @@ def train():
             Y_y = Y_y.view(-1, 1)  # (L*N, 1)
             mask = to_variable(mask.view(-1, 1))  # (L*N, 1)
 
-            preds = torch.masked_select(logits, mask).view(-1, vocab_size)  # (No. of 1s, vocab_size)
+            preds = torch.masked_select(logits, mask).view(-1, vocab_size)
+            # (No. of 1s, vocab_size)
             targets = torch.masked_select(Y_y, mask)
 
             loss = loss_fn(preds, targets)
-            losses_valid.append(loss.data.cpu().numpy())
+            losses_v.append(loss.data.cpu().numpy())
 
-        print("Epoch {} Validation Loss: {:.4f}".format(epoch, np.asscalar(np.mean(losses_valid))))
+        print("Epoch {} Validation Loss: {:.4f}".format(epoch,
+                                                        np.asscalar(np.mean
+                                                                    (losses_v)
+                                                                    )))
 
         with open("loss" + str(epoch), 'w') as f:
             f.write("Epoch {} Training Loss: {:.4f}\n".format(epoch, np.asscalar(np.mean(losses))))
-            f.write("Epoch {} Validation Loss: {:.4f}".format(epoch, np.asscalar(np.mean(losses_valid))))
+            f.write("Epoch {} Validation Loss: {:.4f}".format(epoch, np.asscalar(np.mean(losses_v))))
 
 
 train()
