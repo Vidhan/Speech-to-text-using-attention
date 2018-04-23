@@ -115,14 +115,14 @@ class Encoder(nn.Module):
                                      out_features=value_dimension)
 
     def forward(self, h):
-        h_0_1 = self.h_0_1.expand(-1, batch, -1)
-        c_0_1 = self.c_0_1.expand(-1, batch, -1)
-        h_0_2 = self.h_0_2.expand(-1, batch, -1)
-        c_0_2 = self.c_0_2.expand(-1, batch, -1)
-        h_0_3 = self.h_0_3.expand(-1, batch, -1)
-        c_0_3 = self.c_0_3.expand(-1, batch, -1)
-        h_0_4 = self.h_0_4.expand(-1, batch, -1)
-        c_0_4 = self.c_0_4.expand(-1, batch, -1)
+        h_0_1 = self.h_0_1.expand(-1, batch, -1).contiguous()
+        c_0_1 = self.c_0_1.expand(-1, batch, -1).contiguous()
+        h_0_2 = self.h_0_2.expand(-1, batch, -1).contiguous()
+        c_0_2 = self.c_0_2.expand(-1, batch, -1).contiguous()
+        h_0_3 = self.h_0_3.expand(-1, batch, -1).contiguous()
+        c_0_3 = self.c_0_3.expand(-1, batch, -1).contiguous()
+        h_0_4 = self.h_0_4.expand(-1, batch, -1).contiguous()
+        c_0_4 = self.c_0_4.expand(-1, batch, -1).contiguous()
         h, state = self.rnn1(h, (h_0_1, c_0_1))
         pad_array, seq_length = pad_packed_sequence(sequence=h,
                                                     padding_value=0,
@@ -274,6 +274,7 @@ def train():
         dataset_valid, batch_size=batch, shuffle=True,
         collate_fn=MyDataLoader())
 
+    print ("Training begins")
     for epoch in range(0, epochs):
         losses = []
         model.train()
@@ -295,6 +296,7 @@ def train():
             loss = loss_fn(preds, targets)
             loss.backward()
             losses.append(loss.data.cpu().numpy())
+            print (losses)   
             optim.step()
 
         torch.save(model.state_dict(), 'model_params' + str(epoch) + '.pt')
