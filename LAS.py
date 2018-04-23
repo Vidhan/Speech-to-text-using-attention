@@ -195,8 +195,8 @@ class Decoder(nn.Module):
     # keys should be # (utterance length, batch size, key dimension)
     # values should be # (utterance length, batch size, value dimension)
     def forward(self, input, keys, values):
-        h, c = self.h0.expand(input.shape[1], -1),  
-               self.c0.expand(input.shape[1], -1)
+        h = self.h0.expand(input.shape[1], -1)
+        c = self.c0.expand(input.shape[1], -1)
         keys = keys.permute(1, 2, 0)  # batch, key, utterance_length
         values = values.permute(1, 0, 2)  # bath, utterance_length, value
 
