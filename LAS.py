@@ -81,7 +81,7 @@ class MyDataLoader():
         X = np.swapaxes(X, 1, 2)
         X = to_variable(to_tensor(X))  # max_utterance X batch_size X mel_freq
 
-        return pack_padded_sequence(X, X_sizes), Y_x, Y_y, Y_sizes
+        return pack_padded_sequence(X, X_sizes), Y_x, Y_y, Y_sizes, X.shape[1]
 
 
 class Encoder(nn.Module):
@@ -114,7 +114,7 @@ class Encoder(nn.Module):
         self.projection2 = nn.Linear(in_features=2 * e_hidden_dimension,
                                      out_features=value_dimension)
 
-    def forward(self, h):
+    def forward(self, h, batch):
         h_0_1 = self.h_0_1.expand(-1, batch, -1).contiguous()
         c_0_1 = self.c_0_1.expand(-1, batch, -1).contiguous()
         h_0_2 = self.h_0_2.expand(-1, batch, -1).contiguous()
@@ -237,8 +237,8 @@ class Model(nn.Module):
         self.encoder = Encoder()
         self.decoder = Decoder()
 
-    def forward(self, X, Y_x):
-        keys, values = self.encoder(X)
+    def forward(self, X, batch_size, Y_x):
+        keys, values = self.encoder(X, batch_size)
         logits = self.decoder(Y_x, keys, values)
         return logits
 
@@ -279,10 +279,10 @@ def train():
     for epoch in range(0, epochs):
         losses = []
         model.train()
-        for (X, Y_x, Y_y, Y_sizes) in data_loader:
+        for (X, Y_x, Y_y, Y_sizes, batch_size) in data_loader:
             print ("Enter")
             optim.zero_grad()
-            logits = model(X, Y_x)  # L X N X V
+            logits = model(X, batch_size, Y_x)  # L X N X V
             Y_sizes = torch.Tensor(Y_sizes).view(1, -1)  # 1 X N
 
             mask = torch.arange(1, Y_y.shape[0] + 1).view(-1, 1)  # L X 1
@@ -308,9 +308,9 @@ def train():
 
         losses_v = []
         model.eval()
-        for (X, Y_x, Y_y, Y_sizes) in data_loader_valid:
+        for (X, Y_x, Y_y, Y_sizes, batch_size) in data_loader_valid:
 
-            logits = model(X, Y_x)  # L X N X V
+            logits = model(X, batch_size, Y_x)  # L X N X V
             Y_sizes = torch.Tensor(Y_sizes).view(1, -1)  # 1 X N
 
             mask = torch.arange(1, Y_y.shape[0] + 1).view(-1, 1)  # L X 1
