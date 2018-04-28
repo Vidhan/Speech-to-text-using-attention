@@ -189,7 +189,11 @@ class Decoder(nn.Module):
                                     hidden_size=hidden_dimension)
         self.projection = nn.Linear(in_features=hidden_dimension
                                     + value_dimension,
+                                    out_features=embedding_dimension)
+        self.activation = nn.LeakyRelu()
+        self.projection2 = nn.Linear(in_features=embedding_dimension,
                                     out_features=vocab_size)
+        self.projection2.weight = self.embedding.weight
 
     # input should be #timesteps X #batch_size
     # keys should be # (utterance length, batch size, key dimension)
@@ -217,6 +221,8 @@ class Decoder(nn.Module):
             h, c = self.lstmCell(character, (h, c))
 
             logits = self.projection(torch.cat((h, context), dim=-1))
+            logits = self.activation(logits)
+            logits = self.projection2(logits)
             logit_list.append(logits)
 
             query = self.phi(h)  # (batch_size, key_dimension)
@@ -304,7 +310,7 @@ def train():
             losses.append(loss.data.cpu().numpy())
             optim.step()
 
-        torch.save(model.state_dict(), 'model3_params' + str(epoch) + '.pt')
+        torch.save(model.state_dict(), 'model4_params' + str(epoch) + '.pt')
         print("Epoch {} Training Loss: {:.4f}".format(epoch, np.asscalar(np.mean(losses))))
 
         losses_v = []
@@ -333,14 +339,13 @@ def train():
                                                                     (losses_v)
                                                                     )))
 
-        with open("3loss" + str(epoch), 'w') as f:
+        with open("4loss" + str(epoch), 'w') as f:
             f.write("Epoch {} Training Loss: {:.4f}\n".format(epoch, np.asscalar(np.mean(losses))))
             f.write("Epoch {} Validation Loss: {:.4f}".format(epoch, np.asscalar(np.mean(losses_v))))
 
 train()
 
 
-# recitation6
 '''
 Two options in general
 
@@ -357,13 +362,9 @@ The standard is to always use teacher forcing during training 100 % . Reducing t
     In terms of actual value to use, calculate the mean of the sum for each transcript. So sum along the character dimension then mean along the batch dimension.
 '''
 
-# Our projection is an MLP(linear, leaky relu, linear)
 
 # if you have a stack of 3 LSTMs, use the h0 of the
 # last LSTM in the stack to generate your additional query.
-#(hidden+value size)->(embedding)->(vocab)
-#self.projection.weight = self.embedding.weight
 # self.lstmCell2 = LSTMCell(input_size=300, hidden_size=300)
 # self.lstmCell3 = LSTMCell(input_size=300, hidden_size=300)
-# TODO: is cropping to multiple of 8 a good idea? what if utterance become size 0
 # TODO: masked softmax
