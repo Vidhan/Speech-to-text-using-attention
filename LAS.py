@@ -190,7 +190,7 @@ class Decoder(nn.Module):
         self.projection = nn.Linear(in_features=hidden_dimension
                                     + value_dimension,
                                     out_features=embedding_dimension)
-        self.activation = nn.LeakyRelu()
+        self.activation = nn.LeakyReLU()
         self.projection2 = nn.Linear(in_features=embedding_dimension,
                                     out_features=vocab_size)
         self.projection2.weight = self.embedding.weight
