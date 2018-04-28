@@ -12,7 +12,7 @@ vocab_size = 33
 mel_freq = 40
 
 batch = 32 
-epochs = 20
+epochs = 25
 key_dimension = 128
 value_dimension = 128
 e_hidden_dimension = 300
@@ -81,21 +81,21 @@ class MyDataLoader():
         X = np.swapaxes(X, 1, 2)
         X = to_variable(to_tensor(X))  # max_utterance X batch_size X mel_freq
 
-        return pack_padded_sequence(X, X_sizes), Y_x, Y_y, Y_sizes
+        return pack_padded_sequence(X, X_sizes), Y_x, Y_y, Y_sizes, X.shape[1]
 
 
 class Encoder(nn.Module):
 
     def __init__(self):
         super(Encoder, self).__init__()
-        #self.h_0_1 = nn.Parameter(torch.FloatTensor(2, 1, e_hidden_dimension))
-        #self.c_0_1 = nn.Parameter(torch.FloatTensor(2, 1, e_hidden_dimension))
-        #self.h_0_2 = nn.Parameter(torch.FloatTensor(2, 1, e_hidden_dimension))
-        #self.c_0_2 = nn.Parameter(torch.FloatTensor(2, 1, e_hidden_dimension))
-        #self.h_0_3 = nn.Parameter(torch.FloatTensor(2, 1, e_hidden_dimension))
-        #self.c_0_3 = nn.Parameter(torch.FloatTensor(2, 1, e_hidden_dimension))
-        #self.h_0_4 = nn.Parameter(torch.FloatTensor(2, 1, e_hidden_dimension))
-        #self.c_0_4 = nn.Parameter(torch.FloatTensor(2, 1, e_hidden_dimension))
+        self.h_0_1 = nn.Parameter(torch.FloatTensor(2, 1, e_hidden_dimension).zero_())
+        self.c_0_1 = nn.Parameter(torch.FloatTensor(2, 1, e_hidden_dimension).zero_())
+        self.h_0_2 = nn.Parameter(torch.FloatTensor(2, 1, e_hidden_dimension).zero_())
+        self.c_0_2 = nn.Parameter(torch.FloatTensor(2, 1, e_hidden_dimension).zero_())
+        self.h_0_3 = nn.Parameter(torch.FloatTensor(2, 1, e_hidden_dimension).zero_())
+        self.c_0_3 = nn.Parameter(torch.FloatTensor(2, 1, e_hidden_dimension).zero_())
+        self.h_0_4 = nn.Parameter(torch.FloatTensor(2, 1, e_hidden_dimension).zero_())
+        self.c_0_4 = nn.Parameter(torch.FloatTensor(2, 1, e_hidden_dimension).zero_())
 
         self.rnn1 = nn.LSTM(input_size=mel_freq,
                             hidden_size=e_hidden_dimension, num_layers=1,
@@ -114,16 +114,16 @@ class Encoder(nn.Module):
         self.projection2 = nn.Linear(in_features=2 * e_hidden_dimension,
                                      out_features=value_dimension)
 
-    def forward(self, h):
-        #h_0_1 = self.h_0_1.expand(-1, batch, -1).contiguous()
-        #c_0_1 = self.c_0_1.expand(-1, batch, -1).contiguous()
-        #h_0_2 = self.h_0_2.expand(-1, batch, -1).contiguous()
-        #c_0_2 = self.c_0_2.expand(-1, batch, -1).contiguous()
-        #h_0_3 = self.h_0_3.expand(-1, batch, -1).contiguous()
-        #c_0_3 = self.c_0_3.expand(-1, batch, -1).contiguous()
-        #h_0_4 = self.h_0_4.expand(-1, batch, -1).contiguous()
-        #c_0_4 = self.c_0_4.expand(-1, batch, -1).contiguous()
-        h, state = self.rnn1(h)#, (h_0_1, c_0_1))
+    def forward(self, h, batch):
+        h_0_1 = self.h_0_1.expand(-1, batch, -1).contiguous()
+        c_0_1 = self.c_0_1.expand(-1, batch, -1).contiguous()
+        h_0_2 = self.h_0_2.expand(-1, batch, -1).contiguous()
+        c_0_2 = self.c_0_2.expand(-1, batch, -1).contiguous()
+        h_0_3 = self.h_0_3.expand(-1, batch, -1).contiguous()
+        c_0_3 = self.c_0_3.expand(-1, batch, -1).contiguous()
+        h_0_4 = self.h_0_4.expand(-1, batch, -1).contiguous()
+        c_0_4 = self.c_0_4.expand(-1, batch, -1).contiguous()
+        h, state = self.rnn1(h, (h_0_1, c_0_1))
         pad_array, seq_length = pad_packed_sequence(sequence=h,
                                                     padding_value=0,
                                                     batch_first=False)
@@ -136,7 +136,7 @@ class Encoder(nn.Module):
         seq_length = [int(x / 2) for x in seq_length]
 
         h = pack_padded_sequence(pad_array, seq_length)
-        h, state = self.rnn2(h)#, (h_0_2, c_0_2))
+        h, state = self.rnn2(h, (h_0_2, c_0_2))
         pad_array, seq_length = pad_packed_sequence(sequence=h,
                                                     padding_value=0,
                                                     batch_first=False)
@@ -149,7 +149,7 @@ class Encoder(nn.Module):
         seq_length = [int(x / 2) for x in seq_length]
 
         h = pack_padded_sequence(pad_array, seq_length)
-        h, state = self.rnn3(h) #, (h_0_3, c_0_3))
+        h, state = self.rnn3(h, (h_0_3, c_0_3))
         pad_array, seq_length = pad_packed_sequence(sequence=h,
                                                     padding_value=0,
                                                     batch_first=False)
@@ -162,7 +162,7 @@ class Encoder(nn.Module):
         seq_length = [int(x / 2) for x in seq_length]
 
         h = pack_padded_sequence(pad_array, seq_length)
-        h, state = self.rnn4(h) #, (h_0_4, c_0_4))
+        h, state = self.rnn4(h, (h_0_4, c_0_4))
         pad_array, seq_length = pad_packed_sequence(sequence=h,
                                                     padding_value=0,
                                                     batch_first=False)
@@ -182,8 +182,8 @@ class Decoder(nn.Module):
         self.softmax = nn.Softmax(dim=-1)
         self.embedding = nn.Embedding(num_embeddings=vocab_size,
                                       embedding_dim=embedding_dimension)
-        self.h0 = nn.Parameter(torch.FloatTensor(1, hidden_dimension))
-        self.c0 = nn.Parameter(torch.FloatTensor(1, hidden_dimension))
+        self.h0 = nn.Parameter(torch.FloatTensor(1, hidden_dimension).zero_())
+        self.c0 = nn.Parameter(torch.FloatTensor(1, hidden_dimension).zero_())
         self.lstmCell = nn.LSTMCell(input_size=embedding_dimension
                                     + value_dimension,
                                     hidden_size=hidden_dimension)
@@ -216,15 +216,15 @@ class Decoder(nn.Module):
 
             h, c = self.lstmCell(character, (h, c))
 
+            logits = self.projection(torch.cat((h, context), dim=-1))
+            logit_list.append(logits)
+
             query = self.phi(h)  # (batch_size, key_dimension)
             query = torch.unsqueeze(query, dim=1)  # (batch_size, 1,  key)
             energy = torch.bmm(query, keys)  # (batch_size, 1, utter_length)
             attention = self.softmax(energy)  # (batch_size, 1, utter_length)
             context = torch.bmm(attention, values)  # batch_size X 1 X value
             context = torch.squeeze(context)  # batch_size X value_dimension
-
-            logits = self.projection(torch.cat((h, context), dim=-1))
-            logit_list.append(logits)
 
         logit_list = torch.stack(logit_list)  # timesteps X batch_size X vocab
         return logit_list
@@ -237,11 +237,8 @@ class Model(nn.Module):
         self.encoder = Encoder()
         self.decoder = Decoder()
 
-    def forward(self, X, Y_x):
-        keys, values = self.encoder(X)
-        #print (keys)
-        #print (values)
-        #exit()
+    def forward(self, X, batch_size, Y_x):
+        keys, values = self.encoder(X, batch_size)
         logits = self.decoder(Y_x, keys, values)
         return logits
 
@@ -259,6 +256,7 @@ def train():
         s = s | set(transcript)
 
     vocab = sorted(s)
+    #np.save("vocab.npy", vocab)
 
     model = Model()
     optim = torch.optim.Adam(model.parameters(), weight_decay=1e-5, lr=1e-3)
@@ -268,7 +266,7 @@ def train():
         model = model.cuda()
         loss_fn = loss_fn.cuda()
 
-    # model.load_state_dict(torch.load('model_params26.pt'))
+    #model.load_state_dict(torch.load('model_params19.pt'))
 
     dataset = MyCustomDataset(features, transcripts, vocab)
     dataset_valid = MyCustomDataset(features_valid, transcripts_valid, vocab)
@@ -282,12 +280,11 @@ def train():
     for epoch in range(0, epochs):
         losses = []
         model.train()
-        for (X, Y_x, Y_y, Y_sizes) in data_loader:
-            print ("Enter")
+
+        # X_x and X_y => transcript_l X batch 
+        for (X, Y_x, Y_y, Y_sizes, batch_size) in data_loader:
             optim.zero_grad()
-            logits = model(X, Y_x)  # L X N X V
-            #print (logits)
-            #exit()
+            logits = model(X, batch_size, Y_x)  # L X N X V
             Y_sizes = torch.Tensor(Y_sizes).view(1, -1)  # 1 X N
 
             mask = torch.arange(1, Y_y.shape[0] + 1).view(-1, 1)  # L X 1
@@ -305,14 +302,14 @@ def train():
             losses.append(loss.data.cpu().numpy())
             optim.step()
 
-        torch.save(model.state_dict(), 'model_params' + str(epoch) + '.pt')
+        torch.save(model.state_dict(), 'model3_params' + str(epoch) + '.pt')
         print("Epoch {} Training Loss: {:.4f}".format(epoch, np.asscalar(np.mean(losses))))
 
         losses_valid = []
         model.eval()
-        for (X, Y_x, Y_y, Y_sizes) in data_loader_valid:
+        for (X, Y_x, Y_y, Y_sizes, batch_size) in data_loader_valid:
 
-            logits = model(X, Y_x)  # L X N X V
+            logits = model(X, batch_size, Y_x)  # L X N X V
             Y_sizes = torch.Tensor(Y_sizes).view(1, -1)  # 1 X N
 
             mask = torch.arange(1, Y_y.shape[0] + 1).view(-1, 1)  # L X 1
@@ -330,10 +327,9 @@ def train():
 
         print("Epoch {} Validation Loss: {:.4f}".format(epoch, np.asscalar(np.mean(losses_valid))))
 
-        with open("loss" + str(epoch), 'w') as f:
+        with open("3loss" + str(epoch), 'w') as f:
             f.write("Epoch {} Training Loss: {:.4f}\n".format(epoch, np.asscalar(np.mean(losses))))
             f.write("Epoch {} Validation Loss: {:.4f}".format(epoch, np.asscalar(np.mean(losses_valid))))
-
 
 train()
 
