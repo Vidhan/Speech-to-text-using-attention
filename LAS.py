@@ -12,7 +12,7 @@ vocab_size = 33
 mel_freq = 40
 
 batch = 32 
-epochs = 25
+epochs = 20
 key_dimension = 128
 value_dimension = 128
 e_hidden_dimension = 300
@@ -283,6 +283,7 @@ def train():
 
         # X_x and X_y => transcript_l X batch 
         for (X, Y_x, Y_y, Y_sizes, batch_size) in data_loader:
+            print ("Enter")
             optim.zero_grad()
             logits = model(X, batch_size, Y_x)  # L X N X V
             Y_sizes = torch.Tensor(Y_sizes).view(1, -1)  # 1 X N
@@ -294,7 +295,8 @@ def train():
             Y_y = Y_y.view(-1, 1)  # (L*N, 1)
             mask = to_variable(mask.view(-1, 1))  # (L*N, 1)
 
-            preds = torch.masked_select(logits, mask).view(-1, vocab_size)  # (No. of 1s, vocab_size)
+            preds = torch.masked_select(logits, mask).view(-1, vocab_size)
+            # (No. of 1s, vocab_size)
             targets = torch.masked_select(Y_y, mask)
 
             loss = loss_fn(preds, targets)
@@ -305,7 +307,7 @@ def train():
         torch.save(model.state_dict(), 'model3_params' + str(epoch) + '.pt')
         print("Epoch {} Training Loss: {:.4f}".format(epoch, np.asscalar(np.mean(losses))))
 
-        losses_valid = []
+        losses_v = []
         model.eval()
         for (X, Y_x, Y_y, Y_sizes, batch_size) in data_loader_valid:
 
@@ -319,17 +321,21 @@ def train():
             Y_y = Y_y.view(-1, 1)  # (L*N, 1)
             mask = to_variable(mask.view(-1, 1))  # (L*N, 1)
 
-            preds = torch.masked_select(logits, mask).view(-1, vocab_size)  # (No. of 1s, vocab_size)
+            preds = torch.masked_select(logits, mask).view(-1, vocab_size)
+            # (No. of 1s, vocab_size)
             targets = torch.masked_select(Y_y, mask)
 
             loss = loss_fn(preds, targets)
-            losses_valid.append(loss.data.cpu().numpy())
+            losses_v.append(loss.data.cpu().numpy())
 
-        print("Epoch {} Validation Loss: {:.4f}".format(epoch, np.asscalar(np.mean(losses_valid))))
+        print("Epoch {} Validation Loss: {:.4f}".format(epoch,
+                                                        np.asscalar(np.mean
+                                                                    (losses_v)
+                                                                    )))
 
         with open("3loss" + str(epoch), 'w') as f:
             f.write("Epoch {} Training Loss: {:.4f}\n".format(epoch, np.asscalar(np.mean(losses))))
-            f.write("Epoch {} Validation Loss: {:.4f}".format(epoch, np.asscalar(np.mean(losses_valid))))
+            f.write("Epoch {} Validation Loss: {:.4f}".format(epoch, np.asscalar(np.mean(losses_v))))
 
 train()
 
