@@ -19,7 +19,7 @@ value_dimension = 128
 e_hidden_dimension = 300
 hidden_dimension = 300
 embedding_dimension = 400
-max_len = 500
+max_len = 70
 
 def write_results(predictions, output_file='predictions_final.txt'):
     with open(output_file, 'w') as f:
@@ -75,14 +75,14 @@ class Encoder(nn.Module):
 
     def __init__(self):
         super(Encoder, self).__init__()
-        self.h_0_1 = nn.Parameter(torch.FloatTensor(2, 1, e_hidden_dimension).zero_())
-        self.c_0_1 = nn.Parameter(torch.FloatTensor(2, 1, e_hidden_dimension).zero_())
-        self.h_0_2 = nn.Parameter(torch.FloatTensor(2, 1, e_hidden_dimension).zero_())
-        self.c_0_2 = nn.Parameter(torch.FloatTensor(2, 1, e_hidden_dimension).zero_())
-        self.h_0_3 = nn.Parameter(torch.FloatTensor(2, 1, e_hidden_dimension).zero_())
-        self.c_0_3 = nn.Parameter(torch.FloatTensor(2, 1, e_hidden_dimension).zero_())
-        self.h_0_4 = nn.Parameter(torch.FloatTensor(2, 1, e_hidden_dimension).zero_())
-        self.c_0_4 = nn.Parameter(torch.FloatTensor(2, 1, e_hidden_dimension).zero_())
+        #self.h_0_1 = nn.Parameter(torch.FloatTensor(2, 1, e_hidden_dimension).zero_())
+        #self.c_0_1 = nn.Parameter(torch.FloatTensor(2, 1, e_hidden_dimension).zero_())
+        #self.h_0_2 = nn.Parameter(torch.FloatTensor(2, 1, e_hidden_dimension).zero_())
+        #self.c_0_2 = nn.Parameter(torch.FloatTensor(2, 1, e_hidden_dimension).zero_())
+        #self.h_0_3 = nn.Parameter(torch.FloatTensor(2, 1, e_hidden_dimension).zero_())
+        #self.c_0_3 = nn.Parameter(torch.FloatTensor(2, 1, e_hidden_dimension).zero_())
+        #self.h_0_4 = nn.Parameter(torch.FloatTensor(2, 1, e_hidden_dimension).zero_())
+        #self.c_0_4 = nn.Parameter(torch.FloatTensor(2, 1, e_hidden_dimension).zero_())
         self.rnn1 = nn.LSTM(input_size=mel_freq,
                             hidden_size=e_hidden_dimension, num_layers=1,
                             bidirectional=True)
@@ -101,16 +101,16 @@ class Encoder(nn.Module):
                                      out_features=value_dimension)
 
     def forward(self, h, batch):
-        h_0_1 = self.h_0_1.expand(-1, batch, -1).contiguous()
-        c_0_1 = self.c_0_1.expand(-1, batch, -1).contiguous()
-        h_0_2 = self.h_0_2.expand(-1, batch, -1).contiguous()
-        c_0_2 = self.c_0_2.expand(-1, batch, -1).contiguous()
-        h_0_3 = self.h_0_3.expand(-1, batch, -1).contiguous()
-        c_0_3 = self.c_0_3.expand(-1, batch, -1).contiguous()
-        h_0_4 = self.h_0_4.expand(-1, batch, -1).contiguous()
-        c_0_4 = self.c_0_4.expand(-1, batch, -1).contiguous()
+        #h_0_1 = self.h_0_1.expand(-1, batch, -1).contiguous()
+        #c_0_1 = self.c_0_1.expand(-1, batch, -1).contiguous()
+        #h_0_2 = self.h_0_2.expand(-1, batch, -1).contiguous()
+        #c_0_2 = self.c_0_2.expand(-1, batch, -1).contiguous()
+        #h_0_3 = self.h_0_3.expand(-1, batch, -1).contiguous()
+        #c_0_3 = self.c_0_3.expand(-1, batch, -1).contiguous()
+        #h_0_4 = self.h_0_4.expand(-1, batch, -1).contiguous()
+        #c_0_4 = self.c_0_4.expand(-1, batch, -1).contiguous()
 
-        h, state = self.rnn1(h, (h_0_1, c_0_1))
+        h, state = self.rnn1(h)#, (h_0_1, c_0_1))
         pad_array, seq_length = pad_packed_sequence(sequence=h,
                                                     padding_value=0,
                                                     batch_first=False)
@@ -123,7 +123,7 @@ class Encoder(nn.Module):
         seq_length = [int(x / 2) for x in seq_length]
 
         h = pack_padded_sequence(pad_array, seq_length)
-        h, state = self.rnn2(h, (h_0_2, c_0_2))
+        h, state = self.rnn2(h)#, (h_0_2, c_0_2))
         pad_array, seq_length = pad_packed_sequence(sequence=h,
                                                     padding_value=0,
                                                     batch_first=False)
@@ -136,7 +136,7 @@ class Encoder(nn.Module):
         seq_length = [int(x / 2) for x in seq_length]
 
         h = pack_padded_sequence(pad_array, seq_length)
-        h, state = self.rnn3(h, (h_0_3, c_0_3))
+        h, state = self.rnn3(h)#, (h_0_3, c_0_3))
         pad_array, seq_length = pad_packed_sequence(sequence=h,
                                                     padding_value=0,
                                                     batch_first=False)
@@ -149,7 +149,7 @@ class Encoder(nn.Module):
         seq_length = [int(x / 2) for x in seq_length]
 
         h = pack_padded_sequence(pad_array, seq_length)
-        h, state = self.rnn4(h, (h_0_4, c_0_4))
+        h, state = self.rnn4(h)#, (h_0_4, c_0_4))
         pad_array, seq_length = pad_packed_sequence(sequence=h,
                                                     padding_value=0,
                                                     batch_first=False)
@@ -176,11 +176,11 @@ class Decoder(nn.Module):
                                     hidden_size=hidden_dimension)
         self.projection = nn.Linear(in_features=hidden_dimension
                                     + value_dimension,
-                                    out_features=embedding_dimension)
-        self.activation = nn.LeakyReLU()
-        self.projection2 = nn.Linear(in_features=embedding_dimension,
                                     out_features=vocab_size)
-        self.projection2.weight = self.embedding.weight
+        #self.activation = nn.LeakyReLU()
+        #self.projection2 = nn.Linear(in_features=embedding_dimension,
+        #                            out_features=vocab_size)
+        #self.projection2.weight = self.embedding.weight
 
     # input should be #timesteps X #batch_size
     # keys should be # (utterance length, batch size, key dimension)
@@ -211,13 +211,8 @@ class Decoder(nn.Module):
 
 	
             logits = self.projection(torch.cat((h, context), dim=-1))
-            logits = self.activation(logits)
-            logits = self.projection2(logits)
-
-            predicted_character = torch.max(logits, 1)[1].view(1, -1)
-            character_input = predicted_character
-            val = predicted_character.data.cpu().numpy()[0][0]
-            index_list.append(val)
+            #logits = self.activation(logits)
+            #logits = self.projection2(logits)
 
             query = self.phi(h)  # (batch_size, key_dimension)
             query = torch.unsqueeze(query, dim=1)  # (batch_size, 1,  key)
@@ -225,6 +220,12 @@ class Decoder(nn.Module):
             attention = self.softmax(energy)  # (batch_size, 1, utter_length)
             context = torch.bmm(attention, values)  # batch_size X 1 X value
             context = torch.squeeze(context).view(keys.shape[0], -1)  # batch_size X value_dimension
+
+            predicted_character = torch.max(logits, 1)[1].view(1, -1)
+            character_input = predicted_character
+            val = predicted_character.data.cpu().numpy()[0][0]
+            index_list.append(val)
+
 
         return index_list
 
@@ -250,7 +251,7 @@ def test():
     if torch.cuda.is_available():
         model = model.cuda()
 
-    model.load_state_dict(torch.load('model3_params2.pt', map_location=lambda storage, loc: storage))
+    model.load_state_dict(torch.load('model_params19.pt', map_location=lambda storage, loc: storage))
 
     dataset = MyCustomTestDataset(test_features)
 
@@ -263,7 +264,9 @@ def test():
         index_list = model(X, batch_size)
         output_string = ""
         for index in index_list:
-            if (vocab[index] != start_char): 
+            if (vocab[index] == start_char):
+                break
+            else:
                 output_string += str(vocab[index])
         print (output_string)
         output_list.append(output_string)

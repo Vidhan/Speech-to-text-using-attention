@@ -88,14 +88,14 @@ class Encoder(nn.Module):
 
     def __init__(self):
         super(Encoder, self).__init__()
-        self.h_0_1 = nn.Parameter(torch.FloatTensor(2, 1, e_hidden_dimension).zero_())
-        self.c_0_1 = nn.Parameter(torch.FloatTensor(2, 1, e_hidden_dimension).zero_())
-        self.h_0_2 = nn.Parameter(torch.FloatTensor(2, 1, e_hidden_dimension).zero_())
-        self.c_0_2 = nn.Parameter(torch.FloatTensor(2, 1, e_hidden_dimension).zero_())
-        self.h_0_3 = nn.Parameter(torch.FloatTensor(2, 1, e_hidden_dimension).zero_())
-        self.c_0_3 = nn.Parameter(torch.FloatTensor(2, 1, e_hidden_dimension).zero_())
-        self.h_0_4 = nn.Parameter(torch.FloatTensor(2, 1, e_hidden_dimension).zero_())
-        self.c_0_4 = nn.Parameter(torch.FloatTensor(2, 1, e_hidden_dimension).zero_())
+        #self.h_0_1 = nn.Parameter(torch.FloatTensor(2, 1, e_hidden_dimension).zero_())
+        #self.c_0_1 = nn.Parameter(torch.FloatTensor(2, 1, e_hidden_dimension).zero_())
+        #self.h_0_2 = nn.Parameter(torch.FloatTensor(2, 1, e_hidden_dimension).zero_())
+        #self.c_0_2 = nn.Parameter(torch.FloatTensor(2, 1, e_hidden_dimension).zero_())
+        #self.h_0_3 = nn.Parameter(torch.FloatTensor(2, 1, e_hidden_dimension).zero_())
+        #self.c_0_3 = nn.Parameter(torch.FloatTensor(2, 1, e_hidden_dimension).zero_())
+        #self.h_0_4 = nn.Parameter(torch.FloatTensor(2, 1, e_hidden_dimension).zero_())
+        #self.c_0_4 = nn.Parameter(torch.FloatTensor(2, 1, e_hidden_dimension).zero_())
 
         self.rnn1 = nn.LSTM(input_size=mel_freq,
                             hidden_size=e_hidden_dimension, num_layers=1,
@@ -115,15 +115,15 @@ class Encoder(nn.Module):
                                      out_features=value_dimension)
 
     def forward(self, h, batch):
-        h_0_1 = self.h_0_1.expand(-1, batch, -1).contiguous()
-        c_0_1 = self.c_0_1.expand(-1, batch, -1).contiguous()
-        h_0_2 = self.h_0_2.expand(-1, batch, -1).contiguous()
-        c_0_2 = self.c_0_2.expand(-1, batch, -1).contiguous()
-        h_0_3 = self.h_0_3.expand(-1, batch, -1).contiguous()
-        c_0_3 = self.c_0_3.expand(-1, batch, -1).contiguous()
-        h_0_4 = self.h_0_4.expand(-1, batch, -1).contiguous()
-        c_0_4 = self.c_0_4.expand(-1, batch, -1).contiguous()
-        h, state = self.rnn1(h, (h_0_1, c_0_1))
+        #h_0_1 = self.h_0_1.expand(-1, batch, -1).contiguous()
+        #c_0_1 = self.c_0_1.expand(-1, batch, -1).contiguous()
+        #h_0_2 = self.h_0_2.expand(-1, batch, -1).contiguous()
+        #c_0_2 = self.c_0_2.expand(-1, batch, -1).contiguous()
+        #h_0_3 = self.h_0_3.expand(-1, batch, -1).contiguous()
+        #c_0_3 = self.c_0_3.expand(-1, batch, -1).contiguous()
+        #h_0_4 = self.h_0_4.expand(-1, batch, -1).contiguous()
+        #c_0_4 = self.c_0_4.expand(-1, batch, -1).contiguous()
+        h, state = self.rnn1(h) #, (h_0_1, c_0_1))
         pad_array, seq_length = pad_packed_sequence(sequence=h,
                                                     padding_value=0,
                                                     batch_first=False)
@@ -136,7 +136,7 @@ class Encoder(nn.Module):
         seq_length = [int(x / 2) for x in seq_length]
 
         h = pack_padded_sequence(pad_array, seq_length)
-        h, state = self.rnn2(h, (h_0_2, c_0_2))
+        h, state = self.rnn2(h) #, (h_0_2, c_0_2))
         pad_array, seq_length = pad_packed_sequence(sequence=h,
                                                     padding_value=0,
                                                     batch_first=False)
@@ -149,7 +149,7 @@ class Encoder(nn.Module):
         seq_length = [int(x / 2) for x in seq_length]
 
         h = pack_padded_sequence(pad_array, seq_length)
-        h, state = self.rnn3(h, (h_0_3, c_0_3))
+        h, state = self.rnn3(h) #, (h_0_3, c_0_3))
         pad_array, seq_length = pad_packed_sequence(sequence=h,
                                                     padding_value=0,
                                                     batch_first=False)
@@ -162,7 +162,7 @@ class Encoder(nn.Module):
         seq_length = [int(x / 2) for x in seq_length]
 
         h = pack_padded_sequence(pad_array, seq_length)
-        h, state = self.rnn4(h, (h_0_4, c_0_4))
+        h, state = self.rnn4(h) #, (h_0_4, c_0_4))
         pad_array, seq_length = pad_packed_sequence(sequence=h,
                                                     padding_value=0,
                                                     batch_first=False)
@@ -189,11 +189,11 @@ class Decoder(nn.Module):
                                     hidden_size=hidden_dimension)
         self.projection = nn.Linear(in_features=hidden_dimension
                                     + value_dimension,
-                                    out_features=embedding_dimension)
-        self.activation = nn.LeakyReLU()
-        self.projection2 = nn.Linear(in_features=embedding_dimension,
                                     out_features=vocab_size)
-        self.projection2.weight = self.embedding.weight
+        #self.activation = nn.LeakyReLU()
+        #self.projection2 = nn.Linear(in_features=embedding_dimension,
+        #                            out_features=vocab_size)
+        #self.projection2.weight = self.embedding.weight
 
     # input should be #timesteps X #batch_size
     # keys should be # (utterance length, batch size, key dimension)
@@ -220,17 +220,18 @@ class Decoder(nn.Module):
 
             h, c = self.lstmCell(character, (h, c))
 
-            logits = self.projection(torch.cat((h, context), dim=-1))
-            logits = self.activation(logits)
-            logits = self.projection2(logits)
-            logit_list.append(logits)
-
             query = self.phi(h)  # (batch_size, key_dimension)
             query = torch.unsqueeze(query, dim=1)  # (batch_size, 1,  key)
             energy = torch.bmm(query, keys)  # (batch_size, 1, utter_length)
             attention = self.softmax(energy)  # (batch_size, 1, utter_length)
             context = torch.bmm(attention, values)  # batch_size X 1 X value
             context = torch.squeeze(context)  # batch_size X value_dimension
+
+            logits = self.projection(torch.cat((h, context), dim=-1))
+            #logits = self.activation(logits)
+            #logits = self.projection2(logits)
+            logit_list.append(logits)
+
 
         logit_list = torch.stack(logit_list)  # timesteps X batch_size X vocab
         return logit_list
@@ -271,8 +272,6 @@ def train():
     if torch.cuda.is_available():
         model = model.cuda()
         loss_fn = loss_fn.cuda()
-
-    #model.load_state_dict(torch.load('model_params19.pt'))
 
     dataset = MyCustomDataset(features, transcripts, vocab)
     dataset_valid = MyCustomDataset(features_valid, transcripts_valid, vocab)
